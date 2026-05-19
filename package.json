@@ -1,0 +1,22 @@
+{
+  "name": "typingustad-server",
+  "version": "2.0.0",
+  "description": "TypingUstad backend — token generation, validation, scores, Paddle webhooks",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.7",
+    "body-parser": "^1.20.2",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
