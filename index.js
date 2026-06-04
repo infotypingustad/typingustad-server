@@ -388,7 +388,7 @@ async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
         <div style="background:rgba(255,255,255,.04);border-radius:12px;padding:20px;">
           <div style="color:#94a3b8;font-size:14px;line-height:2.2;">
             <span style="color:#6c63ff;font-weight:bold;">1.</span> Go to
-            <a href="${YOUR_SITE_URL}/typing-test/" style="color:#6c63ff;">${YOUR_SITE_URL}/typing-test/</a><br/>
+            <a href="${https://typingustad.com/}/typing-test/" style="color:#6c63ff;">${https://typingustad.com/}/typing-test/</a><br/>
             <span style="color:#6c63ff;font-weight:bold;">2.</span> Complete your typing test<br/>
             <span style="color:#6c63ff;font-weight:bold;">3.</span> Click <b style="color:#e2e8f0;">📄 Download Certificate</b><br/>
             <span style="color:#6c63ff;font-weight:bold;">4.</span> Enter the code above and click <b style="color:#e2e8f0;">Verify</b><br/>
@@ -398,13 +398,13 @@ async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
  
         <p style="color:#64748b;font-size:13px;margin-top:20px;">
           You can also use this code on your
-          <a href="${YOUR_SITE_URL}/my-dashboard/" style="color:#6c63ff;">Dashboard page</a>
+          <a href="${https://typingustad.com/}/my-dashboard/" style="color:#6c63ff;">Dashboard page</a>
           to download certificates for any of your saved scores.
         </p>
  
         <div style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#475569;">
           Need help? Reply to this email or WhatsApp us.<br/>
-          <a href="${YOUR_SITE_URL}" style="color:#6c63ff;">${YOUR_SITE_URL}</a>
+          <a href="${https://typingustad.com/}" style="color:#6c63ff;">${https://typingustad.com/}</a>
         </div>
       </div>
     `
