@@ -396,7 +396,7 @@ async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
 
           <p style="color:#64748b;font-size:13px;margin-top:20px;">
             You can also use this code on your
-            <a href="${https://typingustad.com/}/my-dashboard/" style="color:#6c63ff;">Dashboard page</a>.
+            <a href="https://typingustad.com/my-dashboard/" style="color:#6c63ff;">Dashboard page</a>.
             Need help? Reply to this email.
           </p>
 
