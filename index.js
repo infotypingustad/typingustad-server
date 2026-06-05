@@ -365,7 +365,7 @@ async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
 
     // Use onboarding@resend.dev until domain is verified
     // After domain verified change to: certificates@typingustad.com
-    const fromAddress = 'TypingUstad <onboarding@resend.dev>';
+    const fromAddress = 'TypingUstad <certificates@typingustad.com>>';
 
     await resend.emails.send({
       from:    fromAddress,
@@ -420,7 +420,7 @@ async function notifyAdmin(customerEmail, customerName, code, plan) {
     const resend = new Resend(RESEND_API_KEY);
 
     await resend.emails.send({
-      from:    'TypingUstad Server <onboarding@resend.dev>',
+      from:    'TypingUstad Server <certificates@typingustad.com>>',
       to:      ADMIN_EMAIL,
       subject: `💰 New ${plan.toUpperCase()} sale — ${customerEmail}`,
       text:    `New payment received!\n\nName: ${customerName}\nEmail: ${customerEmail}\nPlan: ${plan.toUpperCase()}\nCode sent: ${code}\nTime: ${new Date().toLocaleString()}`
