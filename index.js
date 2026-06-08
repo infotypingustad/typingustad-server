@@ -365,7 +365,7 @@ async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
 
     // Use onboarding@resend.dev until domain is verified
     // After domain verified change to: certificates@typingustad.com
-    const fromAddress = 'TypingUstad <certificates@typingustad.com>>';
+    const fromAddress = 'TypingUstad <certificates@typingustad.com>';
 
     await resend.emails.send({
       from:    fromAddress,
