@@ -174,7 +174,7 @@ app.get('/get-scores', async (req, res) => {
 app.post('/paddle-webhook', async (req, res) => {
   try {
     const event = req.body;
-
+console.log('PADDLE DATA:', JSON.stringify(event.data, null, 2));
     // Only handle completed payments
     if (event.event_type !== 'transaction.completed') {
       return res.status(200).json({ received: true });
