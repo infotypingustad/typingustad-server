@@ -14,6 +14,7 @@ const app        = express();
 const SUPABASE_URL    = process.env.SUPABASE_URL;
 const SUPABASE_KEY    = process.env.SUPABASE_KEY;
 const PADDLE_SECRET   = process.env.PADDLE_SECRET;
+const PADDLE_API_KEY  = process.env.PADDLE_API_KEY;
 const PADDLE_PRO_ID   = process.env.PADDLE_PRO_ID;
 const RESEND_API_KEY  = process.env.RESEND_API_KEY;
 const ADMIN_EMAIL     = process.env.ADMIN_EMAIL;
