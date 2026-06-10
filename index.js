@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════════════════════
-//  TYPINGUSTAD — COMPLETE BACKEND SERVER (Resend Email Version)
-//  Handles: Paddle webhooks, token generation, token validation,
-//           score saving, admin panel, Supabase database
+//  TYPINGUSTAD — COMPLETE BACKEND SERVER
+//  Version 3.0 — Fetches customer email from Paddle API
 // ═══════════════════════════════════════════════════════════
 
 const express    = require('express');
@@ -14,8 +13,8 @@ const app        = express();
 const SUPABASE_URL    = process.env.SUPABASE_URL;
 const SUPABASE_KEY    = process.env.SUPABASE_KEY;
 const PADDLE_SECRET   = process.env.PADDLE_SECRET;
-const PADDLE_API_KEY  = process.env.PADDLE_API_KEY;
 const PADDLE_PRO_ID   = process.env.PADDLE_PRO_ID;
+const PADDLE_API_KEY  = process.env.PADDLE_API_KEY;
 const RESEND_API_KEY  = process.env.RESEND_API_KEY;
 const ADMIN_EMAIL     = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD;
@@ -39,16 +38,17 @@ app.use((req, res, next) => {
 // ══════════════════════════════════════════════════════════
 app.get('/', (req, res) => {
   res.json({
-    status:  'TypingUstad server running ✅',
-    time:    new Date().toISOString(),
-    resend:  RESEND_API_KEY  ? '✅ configured' : '❌ missing RESEND_API_KEY',
-    supabase:SUPABASE_URL    ? '✅ connected'  : '❌ missing SUPABASE_URL',
-    admin:   ADMIN_PASSWORD  ? '✅ password set': '❌ missing ADMIN_PASSWORD'
+    status:     'TypingUstad server running ✅',
+    time:       new Date().toISOString(),
+    resend:     RESEND_API_KEY  ? '✅ configured' : '❌ missing RESEND_API_KEY',
+    supabase:   SUPABASE_URL    ? '✅ connected'  : '❌ missing SUPABASE_URL',
+    admin:      ADMIN_PASSWORD  ? '✅ password set': '❌ missing ADMIN_PASSWORD',
+    paddle_api: PADDLE_API_KEY  ? '✅ configured' : '❌ missing PADDLE_API_KEY'
   });
 });
 
 // ══════════════════════════════════════════════════════════
-//  TOKEN GENERATOR HELPER
+//  TOKEN GENERATOR
 // ══════════════════════════════════════════════════════════
 function generateCode(plan) {
   const prefix = plan === 'pro' ? 'TU-PRO' : 'TU-BSC';
@@ -59,8 +59,47 @@ function generateCode(plan) {
 }
 
 // ══════════════════════════════════════════════════════════
+//  FETCH CUSTOMER FROM PADDLE API
+//  Paddle webhook does not include email — we fetch it
+// ══════════════════════════════════════════════════════════
+async function fetchPaddleCustomer(customerId) {
+  if (!customerId || !PADDLE_API_KEY) {
+    console.log('Cannot fetch customer — missing customerId or PADDLE_API_KEY');
+    return { email: '', name: 'Typist' };
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.paddle.com/customers/${customerId}`,
+      {
+        method:  'GET',
+        headers: {
+          'Authorization': `Bearer ${PADDLE_API_KEY}`,
+          'Content-Type':  'application/json'
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.data) {
+      const email = data.data.email || '';
+      const name  = data.data.name  || 'Typist';
+      console.log(`✅ Customer fetched: ${name} — ${email}`);
+      return { email, name };
+    } else {
+      console.log('Paddle customer fetch returned no data:', JSON.stringify(data));
+      return { email: '', name: 'Typist' };
+    }
+
+  } catch (err) {
+    console.error('fetchPaddleCustomer error:', err.message);
+    return { email: '', name: 'Typist' };
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 //  1. VALIDATE TOKEN
-//     Called by your website when user enters a code
 //     POST /validate-token
 // ══════════════════════════════════════════════════════════
 app.post('/validate-token', async (req, res) => {
@@ -175,20 +214,31 @@ app.get('/get-scores', async (req, res) => {
 app.post('/paddle-webhook', async (req, res) => {
   try {
     const event = req.body;
-console.log('PADDLE DATA:', JSON.stringify(event.data, null, 2));
+
     // Only handle completed payments
     if (event.event_type !== 'transaction.completed') {
+      console.log(`Ignored event: ${event.event_type}`);
       return res.status(200).json({ received: true });
     }
 
-    const transaction   = event.data;
-    const customerEmail = transaction.customer?.email || '';
-    const customerName  = transaction.customer?.name  || 'Typist';
-    const priceId       = transaction.items?.[0]?.price?.id || '';
-    const isPro         = priceId === PADDLE_PRO_ID;
-    const plan          = isPro ? 'pro' : 'basic';
-    const uses          = isPro ? 5 : 1;
-    const expiryDays    = isPro ? 30 : 7;
+    const transaction = event.data;
+    const customerId  = transaction.customer_id || '';
+    const priceId     = transaction.items?.[0]?.price?.id || '';
+    const isPro       = priceId === PADDLE_PRO_ID;
+    const plan        = isPro ? 'pro' : 'basic';
+    const uses        = isPro ? 5 : 1;
+    const expiryDays  = isPro ? 30 : 7;
+
+    console.log(`Payment received — customer_id: ${customerId} — price: ${priceId} — plan: ${plan}`);
+
+    // ── FETCH CUSTOMER EMAIL FROM PADDLE API ──
+    const customer      = await fetchPaddleCustomer(customerId);
+    const customerEmail = customer.email;
+    const customerName  = customer.name;
+
+    if (!customerEmail) {
+      console.log('⚠️ No email found for customer — token will be saved without email');
+    }
 
     // Generate code
     const code      = generateCode(plan);
@@ -207,19 +257,21 @@ console.log('PADDLE DATA:', JSON.stringify(event.data, null, 2));
         user_name:      customerName,
         source:         'paddle',
         status:         'active',
-        note:           `Paddle auto — ${customerEmail}`,
+        note:           `Paddle auto — ${customerEmail || customerId}`,
         created_at:     new Date().toISOString()
       }]);
 
     if (insertError) throw insertError;
 
-    // Send email to user via Resend
-    await sendCodeEmail(customerEmail, customerName, code, plan, uses, expiryDays);
+    // Send email to customer if we have their email
+    if (customerEmail) {
+      await sendCodeEmail(customerEmail, customerName, code, plan, uses, expiryDays);
+      await notifyAdmin(customerEmail, customerName, code, plan);
+      console.log(`✅ Paddle payment processed — code: ${code} → ${customerEmail}`);
+    } else {
+      console.log(`⚠️ Paddle payment processed — code: ${code} — NO EMAIL — manual delivery needed`);
+    }
 
-    // Notify admin
-    await notifyAdmin(customerEmail, customerName, code, plan);
-
-    console.log(`✅ Paddle payment processed — code: ${code} → ${customerEmail}`);
     res.status(200).json({ received: true });
 
   } catch (err) {
@@ -229,7 +281,7 @@ console.log('PADDLE DATA:', JSON.stringify(event.data, null, 2));
 });
 
 // ══════════════════════════════════════════════════════════
-//  5. ADMIN — GENERATE TOKEN MANUALLY (for Pakistani users)
+//  5. ADMIN — GENERATE TOKEN MANUALLY
 //     POST /admin/generate-token
 // ══════════════════════════════════════════════════════════
 app.post('/admin/generate-token', async (req, res) => {
@@ -359,17 +411,13 @@ app.delete('/admin/tokens/:code', async (req, res) => {
 // ══════════════════════════════════════════════════════════
 async function sendCodeEmail(to, name, code, plan, uses, expiryDays) {
   try {
-    const resend = new Resend(RESEND_API_KEY);
+    const resend    = new Resend(RESEND_API_KEY);
     const planLabel = plan === 'pro'
       ? 'Pro Plan (5 certificates)'
       : 'Basic Plan (1 certificate)';
 
-    // Use onboarding@resend.dev until domain is verified
-    // After domain verified change to: certificates@typingustad.com
-    const fromAddress = 'TypingUstad <certificates@typingustad.com>';
-
     await resend.emails.send({
-      from:    fromAddress,
+      from:    'TypingUstad <certificates@typingustad.com>',
       to:      to,
       subject: '🏆 Your TypeMaster Certificate Code is Ready!',
       html: `
@@ -421,7 +469,7 @@ async function notifyAdmin(customerEmail, customerName, code, plan) {
     const resend = new Resend(RESEND_API_KEY);
 
     await resend.emails.send({
-      from:    'TypingUstad Server <certificates@typingustad.com>>',
+      from:    'TypingUstad Server <certificates@typingustad.com>',
       to:      ADMIN_EMAIL,
       subject: `💰 New ${plan.toUpperCase()} sale — ${customerEmail}`,
       text:    `New payment received!\n\nName: ${customerName}\nEmail: ${customerEmail}\nPlan: ${plan.toUpperCase()}\nCode sent: ${code}\nTime: ${new Date().toLocaleString()}`
@@ -438,7 +486,8 @@ async function notifyAdmin(customerEmail, customerName, code, plan) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`TypingUstad server running on port ${PORT}`);
-  console.log(`Resend:   ${RESEND_API_KEY  ? '✅ configured' : '❌ missing RESEND_API_KEY'}`);
-  console.log(`Supabase: ${SUPABASE_URL    ? '✅ connected'  : '❌ missing SUPABASE_URL'}`);
-  console.log(`Admin:    ${ADMIN_PASSWORD  ? '✅ password set': '❌ missing ADMIN_PASSWORD'}`);
+  console.log(`Resend:     ${RESEND_API_KEY  ? '✅ configured' : '❌ missing RESEND_API_KEY'}`);
+  console.log(`Supabase:   ${SUPABASE_URL    ? '✅ connected'  : '❌ missing SUPABASE_URL'}`);
+  console.log(`Admin:      ${ADMIN_PASSWORD  ? '✅ password set': '❌ missing ADMIN_PASSWORD'}`);
+  console.log(`Paddle API: ${PADDLE_API_KEY  ? '✅ configured' : '❌ missing PADDLE_API_KEY'}`);
 });
